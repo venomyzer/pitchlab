@@ -1,0 +1,23 @@
+// Simple line icons drawn for PitchLab (24px grid, currentColor).
+type P = { className?: string }
+const base = { fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const, viewBox: '0 0 24 24' }
+export const IconLearn = ({ className }: P) => (<svg {...base} className={className}><path d="M3 7l9-4 9 4-9 4-9-4z" /><path d="M7 9v5c0 1.7 2.2 3 5 3s5-1.3 5-3V9" /><path d="M21 7v6" /></svg>)
+export const IconBoard = ({ className }: P) => (<svg {...base} className={className}><rect x="3" y="4" width="18" height="16" rx="1.5" /><path d="M12 4v16" /><circle cx="12" cy="12" r="2.5" /><circle cx="7" cy="9" r="1" fill="currentColor" /><circle cx="16.5" cy="15" r="1" fill="currentColor" /><path d="M7.5 9.5l3 1.5" strokeDasharray="1.5 1.5" /></svg>)
+export const IconLive = ({ className }: P) => (<svg {...base} className={className}><circle cx="12" cy="12" r="2" /><path d="M8 8a5.5 5.5 0 000 8M16 8a5.5 5.5 0 010 8M5 5a9.5 9.5 0 000 14M19 5a9.5 9.5 0 010 14" /></svg>)
+export const IconGear = ({ className }: P) => (<svg {...base} className={className}><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.6 1.6 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.6 1.6 0 00-1.8-.3 1.6 1.6 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.6 1.6 0 00-1-1.5 1.6 1.6 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.6 1.6 0 00.3-1.8 1.6 1.6 0 00-1.5-1H3a2 2 0 110-4h.1a1.6 1.6 0 001.5-1 1.6 1.6 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.6 1.6 0 001.8.3H9a1.6 1.6 0 001-1.5V3a2 2 0 114 0v.1a1.6 1.6 0 001 1.5 1.6 1.6 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.6 1.6 0 00-.3 1.8V9a1.6 1.6 0 001.5 1H21a2 2 0 110 4h-.1a1.6 1.6 0 00-1.5 1z" /></svg>)
+export const IconFlag = ({ className }: P) => (<svg {...base} className={className}><path d="M5 21V4" /><path d="M5 4h12l-2 4 2 4H5" /></svg>)
+export const IconShape = ({ className }: P) => (<svg {...base} className={className}><circle cx="12" cy="4.5" r="1.6" /><circle cx="6" cy="10" r="1.6" /><circle cx="12" cy="10" r="1.6" /><circle cx="18" cy="10" r="1.6" /><circle cx="4" cy="17" r="1.6" /><circle cx="9.3" cy="17" r="1.6" /><circle cx="14.7" cy="17" r="1.6" /><circle cx="20" cy="17" r="1.6" /></svg>)
+export const IconPen = ({ className }: P) => (<svg {...base} className={className}><path d="M4 20l4-1 11-11-3-3L5 16l-1 4z" /><path d="M14 6l3 3" /></svg>)
+export const IconScore = ({ className }: P) => (<svg {...base} className={className}><rect x="2.5" y="6" width="19" height="12" rx="2" /><path d="M12 6v12" /><path d="M6.5 10v4M17.5 10v4M15.5 10h2" /></svg>)
+export const IconLock = ({ className }: P) => (<svg {...base} className={className}><rect x="5" y="11" width="14" height="9" rx="1.5" /><path d="M8 11V8a4 4 0 018 0v3" /></svg>)
+export const IconBack = ({ className }: P) => (<svg {...base} className={className}><path d="M15 5l-7 7 7 7" /></svg>)
+export const IconSound = ({ className, on }: P & { on: boolean }) => (<svg {...base} className={className}><path d="M4 9v6h4l5 4V5L8 9H4z" />{on ? <path d="M16.5 8.5a5 5 0 010 7M19 6a8.5 8.5 0 010 12" /> : <path d="M17 9l5 5M22 9l-5 5" />}</svg>)
+export const IconCard = ({ className }: P) => (<svg {...base} className={className}><rect x="7" y="3" width="10" height="16" rx="1.5" transform="rotate(10 12 11)" /></svg>)
+export const IconBook = ({ className }: P) => (<svg {...base} className={className}><path d="M4 5a2 2 0 012-2h13v16H6a2 2 0 00-2 2V5z" /><path d="M4 19a2 2 0 012-2h13" /></svg>)
+export const IconQuiz = ({ className }: P) => (<svg {...base} className={className}><circle cx="12" cy="12" r="9" /><path d="M9.5 9.5a2.5 2.5 0 114 2c-.9.6-1.5 1.2-1.5 2.3" /><circle cx="12" cy="17" r=".6" fill="currentColor" /></svg>)
+export const IconTimeline = ({ className }: P) => (<svg {...base} className={className}><path d="M3 12h18" /><circle cx="7" cy="12" r="2" /><circle cx="14" cy="12" r="2" /><path d="M7 10V6M14 14v4M19 10V7" /></svg>)
+export const IconExternal = ({ className }: P) => (<svg {...base} className={className}><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 01-1 1H5a1 1 0 01-1-1V7a1 1 0 011-1h5" /></svg>)
+export const IconCopy = ({ className }: P) => (<svg {...base} className={className}><rect x="8" y="8" width="12" height="12" rx="1.5" /><path d="M16 8V5a1 1 0 00-1-1H5a1 1 0 00-1 1v10a1 1 0 001 1h3" /></svg>)
+export const IconUndo = ({ className }: P) => (<svg {...base} className={className}><path d="M9 14L4 9l5-5" /><path d="M4 9h10a6 6 0 010 12h-3" /></svg>)
+export const IconPlay = ({ className }: P) => (<svg {...base} className={className}><path d="M7 4l13 8-13 8V4z" fill="currentColor" /></svg>)
+export const IconPause = ({ className }: P) => (<svg {...base} className={className}><path d="M7 4h3v16H7zM14 4h3v16h-3z" fill="currentColor" /></svg>)
