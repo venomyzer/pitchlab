@@ -43,7 +43,7 @@ Always run `npm run build` before saying a change is done. It type-checks with `
 - Fonts are self-hosted via `@fontsource`: Big Shoulders Display (display), Archivo (body), JetBrains Mono (keys). The OBS scoreboard uses `font-broadcast` (Saira Condensed) so site restyles never change the stream. Pitch SVG labels still name Saira/Barlow.
 - `public/profile/` holds the owner's profile card media (see its README.md). Only the owner's own or licensed files go there.
 - `public/bg/menu-1920.jpg` is a 1920px web copy of the owner-supplied, free-to-use stadium image. Never use it on `/overlay`.
-- Deployed on Vercel. `vercel.json` rewrites all routes to `index.html` and caches hashed `/assets/*` for a year. OBS uses the deployed https URL (copy links are built from `window.location.origin`); the panel and overlay must be on the same origin for sync.
+- Deployed on Vercel at https://pitchlab10.vercel.app (pushes to `main` go live). `vercel.json` rewrites all routes to `index.html` and caches hashed `/assets/*` for a year. OBS uses the deployed https URL (copy links are built from `window.location.origin`); the panel and overlay must be on the same origin for sync.
 
 ## Layout
 

@@ -3,6 +3,8 @@
 Free football tools for streamers and fans, with a console-style menu.
 No account, no server. Everything saves in your own browser.
 
+**▶ Open PitchLab: [pitchlab10.vercel.app](https://pitchlab10.vercel.app)**
+
 ## What's inside
 
 **Streamer Tools**
@@ -20,7 +22,7 @@ No account, no server. Everything saves in your own browser.
 ## Use the scoreboard in OBS
 
 1. Open PitchLab and go to **Streamer Tools → Match Scoreboard**.
-2. Press **Copy** next to the overlay link and add it to OBS as a **Browser Source** (1920 × 1080).
+2. Press **Copy** next to the overlay link (`https://pitchlab10.vercel.app/overlay/scoreboard`) and add it to OBS as a **Browser Source** (1920 × 1080).
    It's transparent. Use the green-screen link (`?bg=green`) if you capture a browser window instead.
 3. Control it from the panel, or with hotkeys:
 
