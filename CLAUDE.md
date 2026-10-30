@@ -75,7 +75,8 @@ src/
     offside.ts            7 lessons + sandbox; isOffsidePosition()
   features/
     pitch/Pitch.tsx       SVG pitch in metres (105×68), Token, Ball, toPitch()
-    pitch/Lines.tsx       formation line polylines + count badges
+    pitch/Lines.tsx       formation line polylines
+    pitch/Pitch3D.tsx     soft 3D camera view: flat <Pitch> tilted with a CSS matrix3d (homography from a 4-corner quad), upright Disc3D tokens drawn on top at projected spots; ref.toPitch() inverts pointer → metres
     pitch/tween.ts        rAF tween over arrays of points
     scoreboard/state.ts   scoreboard state, sync, clock maths, pure actions `A`
     scoreboard/ScoreboardView.tsx   the on-stream graphic (1920×1080 stage)
@@ -93,7 +94,7 @@ scripts/make-sfx.mjs      sound generator
 | `/` | Title screen (once per visit) → main menu |
 | `/learn`, `/tactics`, `/stream` | Hub menus |
 | `/learn/offside` | Offside lessons |
-| `/tactics/formations` | Formation Lab: Team 1 / Team 2 tabs (nameable, saved in `pitchlab:formation-teams`), Q–Y formation of the open tab, G switch tab, O show Team 2 |
+| `/tactics/formations` | Formation Lab: Team 1 / Team 2 tabs (nameable, saved in `pitchlab:formation-teams`), Q–Y formation of the open tab, G switch tab, O show Team 2, V 3D / flat view (saved in `pitchlab:formation-3d`, 3D by default) |
 | `/tactics/sandbox` | Tactics Sandbox |
 | `/stream/scoreboard` | Scoreboard control panel |
 | `/stream/dock` | Compact controls for an OBS Custom Browser Dock (no Shell, no Esc-to-leave, works from ~280px) |

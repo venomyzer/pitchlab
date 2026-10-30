@@ -6,6 +6,7 @@ import { byName, FORMATIONS, OPP_PHASE, PHASE_NAME, PHASES, positions, shapeOf, 
 import { roleOf } from '../data/roles'
 import { FormationLines } from '../features/pitch/Lines'
 import { Pitch, toPitch, Token } from '../features/pitch/Pitch'
+import { Disc3D, Pitch3D, type Pitch3DHandle } from '../features/pitch/Pitch3D'
 import { tween } from '../features/pitch/tween'
 import { useReducedMotion } from '../lib/settings'
 import { sfx } from '../lib/sound'
@@ -15,6 +16,7 @@ import { useNames } from '../lib/useNames'
 const FKEYS = ['q', 'w', 'e', 'r', 't', 'y']
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v))
 const TEAMS_KEY = 'pitchlab:formation-teams'
+const VIEW_KEY = 'pitchlab:formation-3d'
 const OPP_NAME: Record<OppPhase, string> = { ...PHASE_NAME, low: 'Low block' }
 type TeamIdx = 0 | 1
 type Sel = { team: TeamIdx; i: number } | null
@@ -30,6 +32,7 @@ export default function FormationLab() {
   const [lines, setLines] = useState(true)
   const [move, setMove] = useState(false)
   const [showNames, setShowNames] = useState(true)
+  const [view3d, setView3d] = useState(() => load(VIEW_KEY, true))
   const [rawSel, setSel] = useState<Sel>(null)
   const [custom, setCustom] = useState(false)
   const team1 = useNames(), team2 = useNames('pitchlab:names2')
@@ -40,9 +43,11 @@ export default function FormationLab() {
   const [red, setRed] = useState<Pt[]>(() => Array.from({ length: 11 }, () => ({ x: 110, y: 34 })))
   const cancel = useRef<() => void>(() => {})
   const svg = useRef<SVGSVGElement>(null)
+  const p3 = useRef<Pitch3DHandle>(null)
   const posRef = useRef({ blue, red }); posRef.current = { blue, red }
 
   useEffect(() => { save(TEAMS_KEY, teamNames) }, [teamNames])
+  useEffect(() => { save(VIEW_KEY, view3d) }, [view3d])
   const nameOf = (t: TeamIdx) => teamNames[t].trim() || `Team ${t + 1}`
   const rename = (t: TeamIdx, v: string) => setTeamNames(n => (t === 0 ? [v, n[1]] : [n[0], v]))
   // Picking a formation for Team 2 also puts Team 2 on the pitch.
@@ -70,6 +75,7 @@ export default function FormationLab() {
       else if (k === 'l') { sfx.play('toggle'); setLines(v => !v) }
       else if (k === 'm') { sfx.play('toggle'); setMove(v => !v) }
       else if (k === 'n') { sfx.play('toggle'); setShowNames(v => !v) }
+      else if (k === 'v') { sfx.play('toggle'); setView3d(v => !v) }
       else if (k === 'o') { sfx.play('toggle'); setShow2(v => !v) }
       else if (k === 'g') { sfx.play('toggle'); setTab(t => (t ? 0 : 1)) }
       else if (k === 'escape') setSel(null)
@@ -79,18 +85,22 @@ export default function FormationLab() {
   }, [cyclePhase, pick, tab])
 
   // drag players to customise; tapping a player opens their team's tab
-  const drag = useRef<{ team: 'b' | 'r'; i: number } | null>(null)
+  const drag = useRef<{ team: 'b' | 'r'; i: number; dx: number; dy: number } | null>(null)
+  const pointAt = (e: { clientX: number; clientY: number }) => (view3d ? p3.current?.toPitch(e) : svg.current ? toPitch(svg.current, e) : undefined)
   const onDown = (e: React.PointerEvent) => {
     const id = (e.target as Element).closest('[data-token]')?.getAttribute('data-token'); if (!id) return
     const [team, i] = id.split(':'); cancel.current()
-    drag.current = { team: team as 'b' | 'r', i: +i }
+    // keep the grab point under the pointer (in 3D the disc stands above its spot on the grass)
+    const at = pointAt(e), own = (team === 'b' ? blue : red)[+i]
+    drag.current = { team: team as 'b' | 'r', i: +i, dx: at ? own.x - at.x : 0, dy: at ? own.y - at.y : 0 }
     const t: TeamIdx = team === 'b' ? 0 : 1
     setSel({ team: t, i: +i }); setTab(t); sfx.play('hover')
     ;(e.currentTarget as Element).setPointerCapture(e.pointerId); e.preventDefault()
   }
   const onMove = (e: React.PointerEvent) => {
-    const d = drag.current; if (!d || !svg.current) return
-    const q = toPitch(svg.current, e), p = { x: clamp(q.x, -1, 106), y: clamp(q.y, -1, 69) }
+    const d = drag.current; if (!d) return
+    const q = pointAt(e); if (!q) return
+    const p = { x: clamp(q.x + d.dx, -1, 106), y: clamp(q.y + d.dy, -1, 69) }
     setCustom(true)
     if (d.team === 'b') setBlue(bs => bs.map((b, k) => (k === d.i ? p : b))); else setRed(rs => rs.map((r, k) => (k === d.i ? p : r)))
   }
@@ -101,18 +111,31 @@ export default function FormationLab() {
   const fromPh: Phase = phase === 'def' ? 'att' : PHASES[PHASES.indexOf(phase) - 1]
   const from = positions(f, fromPh), to = positions(f, phase)
 
-  const pitch = (
-    <Pitch ref={svg} thirds onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp} aria-label={`${nameOf(0)} in ${form}, ${PHASE_NAME[phase]}${of ? `, ${nameOf(1)} in ${of.name}` : ''}`}>
+  const ariaLabel = `${nameOf(0)} in ${form}, ${PHASE_NAME[phase]}${of ? `, ${nameOf(1)} in ${of.name}` : ''}`
+  const painted = (<>
+    {move && from.map((p, i) => {
+      const q = to[i]; if (i === 0 || Math.hypot(q.x - p.x, q.y - p.y) < 2) return null
+      return <g key={i} opacity=".85"><circle cx={p.x} cy={p.y} r="1.2" fill="none" stroke="#fff" strokeWidth=".25" opacity=".6" />
+        <line x1={p.x} y1={p.y} x2={q.x} y2={q.y} stroke="#fff" strokeWidth=".35" strokeDasharray="1 .7" markerEnd="url(#arrW)" /></g>
+    })}
+    {lines && of && <FormationLines f={of} ph={OPP_PHASE[phase]} pts={red} color="#ffd6d6" />}
+    {lines && <FormationLines f={f} ph={phase} pts={blue} color="#e3e9ff" />}
+  </>)
+  // both teams' players, each with what its disc needs
+  const players = [
+    ...(of ? red.map((p, i) => ({ ...p, key: 'r' + i, dataId: `r:${i}`, team: 'away' as const, label: of.s[i][0], name: showNames ? team2.names[i] : '', halo: sel?.team === 1 && sel.i === i })) : []),
+    ...blue.map((p, i) => ({ ...p, key: 'b' + i, dataId: `b:${i}`, team: 'home' as const, label: f.s[i][0], name: showNames ? team1.names[i] : '', halo: sel?.team === 0 && sel.i === i })),
+  ]
+  const pitch = view3d ? (
+    <Pitch3D ref={p3} thirds reduce={reduce} label={ariaLabel} ground={painted} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp}
+      caption={<span className="font-display font-extrabold uppercase -skew-x-6 text-white/90 text-[clamp(13px,1.4vw,19px)] tracking-wide">{nameOf(0)} attacks →</span>}>
+      {project => [...players].sort((a, b) => a.y - b.y).map(({ key, x, y, ...d }) => { const q = project(x, y); return <Disc3D key={key} {...d} x={q.x} y={q.y} s={q.s} /> })}
+    </Pitch3D>
+  ) : (
+    <Pitch ref={svg} thirds onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp} aria-label={ariaLabel}>
       <text x="-1.5" y="-4.4" fill="#fff" fontSize="2" fontFamily="Saira Condensed, sans-serif" fontWeight={800} opacity=".85">{nameOf(0).toUpperCase()} ATTACKS →</text>
-      {move && from.map((p, i) => {
-        const q = to[i]; if (i === 0 || Math.hypot(q.x - p.x, q.y - p.y) < 2) return null
-        return <g key={i} opacity=".85"><circle cx={p.x} cy={p.y} r="1.2" fill="none" stroke="#fff" strokeWidth=".25" opacity=".6" />
-          <line x1={p.x} y1={p.y} x2={q.x} y2={q.y} stroke="#fff" strokeWidth=".35" strokeDasharray="1 .7" markerEnd="url(#arrW)" /></g>
-      })}
-      {lines && of && <FormationLines f={of} ph={OPP_PHASE[phase]} pts={red} color="#ffd6d6" />}
-      {lines && <FormationLines f={f} ph={phase} pts={blue} color="#e3e9ff" />}
-      {of && red.map((p, i) => <Token key={'r' + i} dataId={`r:${i}`} x={p.x} y={p.y} team="away" label={of.s[i][0]} name={showNames ? team2.names[i] : ''} halo={sel?.team === 1 && sel.i === i} />)}
-      {blue.map((p, i) => <Token key={'b' + i} dataId={`b:${i}`} x={p.x} y={p.y} team="home" label={f.s[i][0]} name={showNames ? team1.names[i] : ''} halo={sel?.team === 0 && sel.i === i} />)}
+      {painted}
+      {players.map(({ key, ...d }) => <Token key={key} {...d} />)}
     </Pitch>
   )
 
@@ -181,6 +204,7 @@ export default function FormationLab() {
         <Toggle on={lines} onChange={setLines} label="Show lines" hint="L" />
         <Toggle on={move} onChange={setMove} label={`Show movement (${nameOf(0)})`} hint="M" />
         <Toggle on={showNames} onChange={setShowNames} label="Show player names" hint="N" />
+        <Toggle on={view3d} onChange={setView3d} label="3D view" hint="V" />
       </div>
       <Btn variant="ghost" onClick={reset} sound={null} disabled={!custom}>Reset positions</Btn>
     </>
