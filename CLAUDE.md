@@ -66,6 +66,7 @@ src/
     MenuPreviews.tsx      drawn previews for the menu (real ScoreboardView / Pitch with demo data)
     ToolLayout.tsx        board layout: pitch + side panel, H = clean view, Shift+F = fullscreen
     ui.tsx                Btn, Kbd, Label, Panel, Toggle, Segmented
+    CopyField.tsx         link + big Copy button for OBS links (falls back to select + "Press Ctrl C")
     Icons.tsx             hand-drawn line icons (24px, currentColor)
     Background.tsx        stadium photo backdrop (public/bg/menu-1920.jpg) under a green scrim; `dim` on tool screens
   data/
@@ -78,7 +79,8 @@ src/
     pitch/tween.ts        rAF tween over arrays of points
     scoreboard/state.ts   scoreboard state, sync, clock maths, pure actions `A`
     scoreboard/ScoreboardView.tsx   the on-stream graphic (1920×1080 stage)
-    scoreboard/hotkeys.ts shared hotkeys for panel + overlay
+    scoreboard/hotkeys.ts shared hotkeys for panel, dock + overlay
+    scoreboard/control.ts useScoreControl (undo history + hotkeys for panel and dock), appUrl(), textOn()
   pages/                  one file per screen
   assets/sfx/             generated WAVs (bundled via import.meta.glob)
 scripts/make-sfx.mjs      sound generator
@@ -94,6 +96,7 @@ scripts/make-sfx.mjs      sound generator
 | `/tactics/formations` | Formation Lab |
 | `/tactics/sandbox` | Tactics Sandbox |
 | `/stream/scoreboard` | Scoreboard control panel |
+| `/stream/dock` | Compact controls for an OBS Custom Browser Dock (no Shell, no Esc-to-leave, works from ~280px) |
 | `/stream/guide` | OBS setup guide |
 | `/overlay/scoreboard` | OBS browser source. No Shell, transparent, 1920×1080 scaled to fit |
 | `/settings` | Sound, motion, hints, delete saved data |
@@ -129,7 +132,8 @@ The clock stores `baseMs` + `startedAt`, so it never drifts and survives reloads
 
 These exist because a mistake on a live stream is public. Keep them when editing:
 
-- **Every scoreboard change is undoable** (`Ctrl+Z` on the panel). New actions must go through the panel's `update()` so they land in history.
+- **Every scoreboard change is undoable** (`Ctrl+Z` / Undo on the panel and the dock). New actions must go through `update()` from `useScoreControl` so they land in history.
+- Starting the clock in Pre-match moves to the 1st half (`A.toggle`), otherwise the overlay would keep the clock hidden.
 - **Destructive actions need a two-step confirm** inside the page (see `ResetMatch` and Settings). Never use `alert`/`confirm`/`prompt`.
 - **Mouse clicks blur buttons** (global handler in `main.tsx`), and Space hotkeys ignore a keyboard-focused button. This stops Space from re-firing the last clicked action. Keep both.
 - **The overlay renders nothing while loading** (`Loading` returns null for `/overlay`). Never show spinners, errors or debug text on the overlay.
@@ -150,7 +154,7 @@ These exist because a mistake on a live stream is public. Keep them when editing
 - Display text: `font-display font-extrabold uppercase -skew-x-6`. This is the main game-UI look. Use it for titles and verdicts, not body copy.
 - Utilities: `cut-corner`, `cut-corner-sm` (angled tile corners), `tabular`, `gutter` (safe-area side padding).
 - Focus = inverted (light fill, dark text) via the `focus-invert` class; selected/on = amber. Keep them distinct. Focus moves instantly (no hover lifts or sweeps).
-- Menu screens (Shell `menu` + title screen) use a drawn football cursor via the `ball-cursor` class (`--cursor-ball` / `--cursor-ball-hover` in `index.css`); tool screens keep normal cursors.
+- Menu screens (Shell `menu` + title screen) use a football cursor via the `ball-cursor` class (`src/assets/cursor/`: 32/64 px copies of `ball.png`, `boot-32/64` (copies of `boot.png` with a black border, hotspot on the toe at 1 16) for clickables; rules in `index.css`); tool screens keep normal cursors.
 - Corners are near-square (radius tokens 2–4px); `cut-corner` marks menu previews.
 - Use `Btn`, `Toggle`, `Segmented`, `Label`, `Panel`, `Kbd` from `components/ui.tsx` instead of new one-off buttons. One-off buttons must add `focus-invert`.
 - Every interactive control plays a sound via `sfx.play()`. `Btn` does this by default. Pass `sound={null}` when the handler plays its own.

@@ -1,42 +1,28 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
+import { CopyField } from '../components/CopyField'
 import { Shell } from '../components/Shell'
-import { IconCopy, IconExternal, IconPause, IconPlay, IconUndo } from '../components/Icons'
+import { IconPause, IconPlay, IconUndo } from '../components/Icons'
 import { Btn, Kbd, Label, Panel, Segmented, Toggle } from '../components/ui'
 import { IS_PREVIEW } from '../config'
+import { appUrl, useScoreControl } from '../features/scoreboard/control'
 import { ScoreboardView } from '../features/scoreboard/ScoreboardView'
-import { useScoreHotkeys } from '../features/scoreboard/hotkeys'
-import { A, clockText, PERIODS, SWATCHES, useNow, useScoreboard, type EventKind, type Position, type Side, type State } from '../features/scoreboard/state'
+import { A, clockText, PERIODS, SWATCHES, useNow, type EventKind, type Position, type Side, type State } from '../features/scoreboard/state'
 import { useReducedMotion } from '../lib/settings'
 import { sfx } from '../lib/sound'
+import { load, save } from '../lib/storage'
 
 export default function ScoreboardControl() {
-  const { state: s, update: rawUpdate, commit } = useScoreboard()
+  // Esc stays "go back" here; the OBS dock uses it to hide the pop-up
+  const { s, update, undo, canUndo } = useScoreControl({ ignoreEsc: true })
   const now = useNow(200)
   const reduce = useReducedMotion()
-  const history = useRef<State[]>([])
-  const [canUndo, setCanUndo] = useState(false)
-  // every change from this panel goes through here, so it can be undone
-  const update = (fn: (st: State) => State) => {
-    rawUpdate(st => { history.current = [...history.current.slice(-40), st]; return fn(st) })
-    setCanUndo(true)
-  }
-  const undo = () => {
-    const prev = history.current.pop(); if (!prev) return
-    sfx.play('back'); commit({ ...prev }); setCanUndo(history.current.length > 0)
-  }
-  const updRef = useRef(update); updRef.current = update
-  const stableUpdate = useRef((fn: (st: State) => State) => updRef.current(fn)).current
-  useScoreHotkeys(stableUpdate, { sounds: true, ignoreEsc: true })
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !(e.target as HTMLElement).closest('input')) { e.preventDefault(); undo() } }
-    window.addEventListener('keydown', onKey); return () => window.removeEventListener('keydown', onKey)
-  })
 
   const c = clockText(s, now)
   return (
     <Shell back="/stream" eyebrow="Streamer tools" title="Match Scoreboard" wide
       actions={<Btn size="sm" variant="ghost" sound={null} onClick={undo} disabled={!canUndo} hint="Ctrl Z"><IconUndo className="h-4 w-4" />Undo</Btn>}>
+      <ObsSetup />
       <div className="max-w-[1600px] mx-auto grid gap-4 grid-cols-1 xl:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] items-start">
         {/* LEFT: preview + connect */}
         <div className="flex flex-col gap-4 min-w-0">
@@ -47,7 +33,6 @@ export default function ScoreboardControl() {
             </div>
             <Preview s={s} now={now} reduce={reduce} />
           </Panel>
-          <ConnectPanel />
           <EventLog s={s} />
         </div>
 
@@ -58,6 +43,12 @@ export default function ScoreboardControl() {
               <TeamControl side="home" s={s} update={update} hotkey="1" />
               <div className="pt-10 font-display font-extrabold text-3xl text-mist-400">–</div>
               <TeamControl side="away" s={s} update={update} hotkey="2" />
+            </div>
+            <div className="mt-3 pt-3 border-t border-line/40 flex items-center gap-x-4 gap-y-1 flex-wrap text-[13px] text-mist-400">
+              <span className="inline-flex gap-1.5 items-center"><Kbd>1</Kbd><Kbd>2</Kbd> goal</span>
+              <span className="inline-flex gap-1.5 items-center"><Kbd>⇧1</Kbd><Kbd>⇧2</Kbd> remove goal</span>
+              <span className="inline-flex gap-1.5 items-center"><Kbd>Space</Kbd> clock</span>
+              <span>Also work in the OBS dock and on the overlay.</span>
             </div>
           </Panel>
 
@@ -256,36 +247,72 @@ function EventLog({ s }: { s: State }) {
   )
 }
 
-function ConnectPanel() {
-  const url = IS_PREVIEW ? '' : `${window.location.origin}${import.meta.env.BASE_URL.replace(/^\.\//, '/')}overlay/scoreboard`.replace(/([^:]\/)\/+/g, '$1')
-  const [copied, setCopied] = useState('')
-  const copy = (u: string, label: string) => {
-    navigator.clipboard?.writeText(u).then(() => { setCopied(label); sfx.play('select'); setTimeout(() => setCopied(''), 2000) }).catch(() => setCopied('select'))
+const SETUP_KEY = 'pitchlab:obs-setup-open'
+
+/** Step-by-step "Add to OBS" card. Fold it away once you're set up; it remembers that in this browser. */
+function ObsSetup() {
+  const [open, setOpen] = useState(() => load(SETUP_KEY, true))
+  const toggle = () => { sfx.play('toggle'); setOpen(o => { save(SETUP_KEY, !o); return !o }) }
+  const overlay = IS_PREVIEW ? '' : appUrl('overlay/scoreboard')
+  const dock = IS_PREVIEW ? '' : appUrl('stream/dock')
+  if (!open) {
+    return (
+      <div className="max-w-[1600px] mx-auto mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-line bg-scrim backdrop-blur-sm px-4 py-2.5">
+        <span className="font-display font-bold uppercase tracking-wide text-[18px]">Add to OBS</span>
+        <span className="text-[14px] text-mist-400">Overlay and dock links, setup steps</span>
+        <Btn size="sm" className="ml-auto" sound={null} onClick={toggle}>Show steps</Btn>
+      </div>
+    )
   }
   return (
-    <Panel className="p-4 flex flex-col gap-3">
-      <div className="flex items-center justify-between"><Label>Add to OBS</Label><Link to="/stream/guide" className="text-[13px] text-flood-400 hover:underline">Step-by-step guide</Link></div>
-      {IS_PREVIEW ? (
-        <p className="text-[14px] text-mist-300">The overlay link appears here once PitchLab is running on its own website.</p>
-      ) : (<>
-        <div className="flex gap-2">
-          <input readOnly value={url} onFocus={e => e.currentTarget.select()} aria-label="Overlay link" className="flex-1 min-w-0 h-10 rounded-md bg-night-900 border border-night-600 px-3 text-[13px] font-mono text-mist-300" />
-          <Btn sound={null} onClick={() => copy(url, 'link')}><IconCopy className="h-4 w-4" />{copied === 'link' ? 'Copied' : 'Copy'}</Btn>
-        </div>
-        <p className="text-[13px] text-mist-400 leading-snug">OBS: Sources → + → Browser → paste the link, width 1920, height 1080. Keep this panel open in an OBS dock or a browser tab to control it.</p>
-        <div className="flex flex-wrap gap-2">
-          <a href={url} target="_blank" rel="noreferrer" onClick={() => sfx.play('select')} className="inline-flex items-center gap-2 h-8 px-3 rounded-md border border-night-600 text-[13px] font-semibold hover:border-flood-500"><IconExternal className="h-4 w-4" />Open overlay</a>
-          <Btn size="sm" variant="ghost" sound={null} onClick={() => copy(url + '?bg=green', 'green')}>{copied === 'green' ? 'Copied' : 'Copy green-screen link'}</Btn>
-        </div>
-      </>)}
-      <div className="flex items-center gap-x-3 gap-y-1 flex-wrap text-[13px] text-mist-400 border-t border-night-700 pt-3">
-        <span className="inline-flex gap-1.5 items-center"><Kbd>1</Kbd><Kbd>2</Kbd> goal</span>
-        <span className="inline-flex gap-1.5 items-center"><Kbd>⇧1</Kbd><Kbd>⇧2</Kbd> remove goal</span>
-        <span className="inline-flex gap-1.5 items-center"><Kbd>Space</Kbd> clock</span>
-        <span>These also work on the overlay itself.</span>
+    <section aria-labelledby="obs-setup" className="max-w-[1600px] mx-auto mb-4 rounded-xl border-2 border-flood-500/70 bg-scrim backdrop-blur-sm p-4 md:p-5">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <h2 id="obs-setup" className="font-display font-extrabold uppercase -skew-x-6 text-[30px] leading-none">Add to OBS</h2>
+        <span className="text-[15px] text-mist-300">Two links, about two minutes. Use OBS 31 or newer.</span>
+        <span className="ml-auto flex items-center gap-2">
+          <Link to="/stream/guide" onClick={() => sfx.play('select')} className="focus-invert h-8 px-3 inline-flex items-center rounded-md border border-line text-[13px] font-semibold hover:bg-white/10">Full guide</Link>
+          <Btn size="sm" variant="ghost" sound={null} onClick={toggle}>Done, hide steps</Btn>
+        </span>
       </div>
-    </Panel>
+      {IS_PREVIEW ? (
+        <p className="mt-3 text-[15px] text-mist-300">The OBS links appear here once the app is running on its own website.</p>
+      ) : (
+        <ol className="mt-4 grid gap-4 lg:grid-cols-3">
+          <Step n={1} title="Show the scoreboard on stream">
+            <p>In OBS: <b>Sources</b> → <b>+</b> → <b>Browser</b>. Paste this link:</p>
+            <CopyField value={overlay} label="overlay link" />
+            <p className="flex flex-wrap gap-1.5 items-center">Then set <Chip>Width 1920</Chip><Chip>Height 1080</Chip> and click <b>OK</b>.</p>
+          </Step>
+          <Step n={2} title="Put the controls in OBS">
+            <p>In OBS: <b>Docks</b> → <b>Custom Browser Docks</b>. Name it <Chip>Scoreboard</Chip> and paste this link:</p>
+            <CopyField value={dock} label="dock link" />
+            <p>Click <b>Apply</b>. Drag the dock next to your scenes.</p>
+          </Step>
+          <Step n={3} title="Test it before you go live">
+            <p>Press <b>Goal</b> in the dock. The score and pop-up should appear on the overlay within a second.</p>
+            <p>Mistake? Press <b>Undo</b> or <Kbd>Ctrl</Kbd> <Kbd>Z</Kbd>.</p>
+            <p className="text-mist-400 text-[13px]">Capturing a browser window instead? Use the green-screen link: <a href={overlay + '?bg=green'} target="_blank" rel="noreferrer" className="underline underline-offset-2 hover:text-mist-100">open</a> it and add a Chroma Key filter.</p>
+          </Step>
+        </ol>
+      )}
+    </section>
   )
+}
+
+function Step({ n, title, children }: { n: number; title: string; children: ReactNode }) {
+  return (
+    <li className="rounded-lg border border-line bg-night-950/60 p-4 flex flex-col gap-3 text-[15px] leading-relaxed min-w-0">
+      <div className="flex items-center gap-3">
+        <span className="h-9 w-9 shrink-0 rounded-md bg-flood-500 text-night-950 font-display font-extrabold text-xl grid place-items-center">{n}</span>
+        <h3 className="font-display font-bold uppercase tracking-wide text-[20px] leading-tight">{title}</h3>
+      </div>
+      {children}
+    </li>
+  )
+}
+
+function Chip({ children }: { children: ReactNode }) {
+  return <span className="inline-block rounded border border-flood-500/60 bg-flood-500/15 px-1.5 py-px font-mono text-[13px] text-flood-400 whitespace-nowrap">{children}</span>
 }
 
 function ResetMatch({ onReset }: { onReset: () => void }) {

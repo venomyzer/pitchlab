@@ -12,6 +12,7 @@ const Sandbox = lazy(() => import('./pages/Sandbox'))
 const ScoreboardControl = lazy(() => import('./pages/ScoreboardControl'))
 const ScoreboardOverlay = lazy(() => import('./pages/ScoreboardOverlay'))
 const ObsGuide = lazy(() => import('./pages/ObsGuide'))
+const ScoreboardDock = lazy(() => import('./pages/ScoreboardDock'))
 const Settings = lazy(() => import('./pages/Settings'))
 const Donate = lazy(() => import('./pages/Donate'))
 
@@ -33,6 +34,7 @@ function AppRoutes() {
         <Route path="/stream" element={<StreamHub />} />
         <Route path="/stream/scoreboard" element={<ScoreboardControl />} />
         <Route path="/stream/guide" element={<ObsGuide />} />
+        <Route path="/stream/dock" element={<ScoreboardDock />} />
         <Route path="/overlay/scoreboard" element={<ScoreboardOverlay />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/donate" element={<Donate />} />

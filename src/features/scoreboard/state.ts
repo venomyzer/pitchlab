@@ -125,7 +125,8 @@ export const A = {
   clearEvent(s: State): State { return { ...s, event: null } },
   start(s: State): State { return s.clock.running ? s : { ...s, clock: { ...s.clock, running: true, startedAt: Date.now() } } },
   pause(s: State): State { return s.clock.running ? { ...s, clock: { running: false, startedAt: null, baseMs: elapsedMs(s) } } : s },
-  toggle(s: State): State { return s.clock.running ? A.pause(s) : A.start(s) },
+  // Starting the clock before kick-off means the match has begun: move to the 1st half so the overlay shows the clock.
+  toggle(s: State): State { return s.clock.running ? A.pause(s) : A.start(s.period === 'PRE' ? A.period(s, '1H') : s) },
   adjust(s: State, deltaMs: number): State {
     const base = Math.max(0, elapsedMs(s) + deltaMs)
     return { ...s, clock: { ...s.clock, baseMs: base, startedAt: s.clock.running ? Date.now() : null } }
