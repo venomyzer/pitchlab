@@ -34,6 +34,8 @@ export const APP_BY = `by ${DEVELOPER.name}`
 
 // Where the Donate tab's button goes (Ko-fi, PayPal.me, etc.). Empty = button shows as not set up yet.
 export const DONATE_URL = ''
+// UPI (India). The Donate tab shows a QR code made from this ID. Empty id = UPI section hidden.
+export const UPI = { id: '9832089547@yespop', name: DEVELOPER.name }
 export const APP_TAGLINE = 'Run the stream. Draw the plan. Explain the game.'
 // Preview builds (VITE_PREVIEW=1) use in-memory routing so they work inside a sandboxed frame.
 export const IS_PREVIEW = import.meta.env.VITE_PREVIEW === '1'

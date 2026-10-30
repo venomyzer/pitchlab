@@ -3,7 +3,7 @@ import { sfx } from './sound'
 
 /**
  * Console-style navigation: arrow keys (or W / S for up / down) move focus to the nearest [data-nav] element
- * in that direction. Enter/Space activate it (native button behaviour).
+ * in that direction. Enter/Space activate it (native button behaviour). Up / down skip the header tabs ([data-nav-tab]).
  */
 export function useSpatialNav(enabled = true) {
   useEffect(() => {
@@ -15,10 +15,12 @@ export function useSpatialNav(enabled = true) {
       if (!dir) return
       const t = e.target as HTMLElement
       if (t.closest('input, textarea, select, [contenteditable="true"]')) return
-      const items = [...document.querySelectorAll<HTMLElement>('[data-nav]')].filter(isVisible)
+      const cur = document.activeElement as HTMLElement | null
+      // the header tabs (Kickoff / Settings / Donate) are reached with Q / E, so up / down never moves into them
+      const fromTab = !!cur?.closest('[data-nav-tab]')
+      const items = [...document.querySelectorAll<HTMLElement>('[data-nav]')].filter(el => isVisible(el) && (fromTab || dir === 'left' || dir === 'right' || !el.hasAttribute('data-nav-tab')))
       if (!items.length) return
       e.preventDefault()
-      const cur = document.activeElement as HTMLElement | null
       if (!cur || !items.includes(cur)) { items[0].focus(); sfx.play('hover'); return }
       const next = nearest(cur, items, dir)
       if (next) { next.focus(); next.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); sfx.play('hover') }

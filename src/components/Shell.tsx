@@ -75,7 +75,7 @@ export function Shell({ title, eyebrow, back, children, menu, wide, actions }: P
           <nav aria-label="Main" className="order-last w-full md:order-none md:w-auto flex items-center gap-2 md:pl-4 md:border-l md:border-line/50">
             <Kbd className="hidden md:inline-block">Q</Kbd>
             {TABS.map((t, i) => (
-              <Link key={t.to} to={t.to} data-nav="" aria-current={i === tab ? 'page' : undefined} onClick={() => sfx.play('select')}
+              <Link key={t.to} to={t.to} data-nav="" data-nav-tab="" aria-current={i === tab ? 'page' : undefined} onClick={() => sfx.play('select')}
                 className={`focus-invert flex-1 md:flex-none md:min-w-[120px] h-9 px-4 grid place-items-center border font-display font-bold uppercase tracking-[0.14em] text-[16px]
                   ${i === tab ? 'border-focus border-2 text-mist-100 bg-night-950/40' : 'border-line/70 text-mist-300 hover:text-mist-100 hover:border-focus'}`}>
                 {t.label}
