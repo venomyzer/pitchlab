@@ -49,7 +49,7 @@ Always run `npm run build` before saying a change is done. It type-checks with `
 
 ```
 src/
-  config.ts               APP_NAME, DEVELOPER (name, role, about, social links), DONATE_URL, tagline, IS_PREVIEW flag
+  config.ts               APP_NAME, DEVELOPER (name, role, about, social links), DONATE_URL, UPI (id → Donate tab QR, made in-browser by qrcode-generator), tagline, IS_PREVIEW flag
   App.tsx                 routes (pages are lazy-loaded)
   main.tsx                entry + global click-blur handler (stream safety)
   index.css               Tailwind import, @theme tokens, custom utilities
