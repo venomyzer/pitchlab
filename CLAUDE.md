@@ -58,7 +58,7 @@ src/
     settings.tsx          SettingsProvider, useSettings, useReducedMotion
     storage.ts            safe localStorage (load/loadRaw/save never throw)
     spatialNav.ts         arrow-key / W-S navigation between [data-nav] elements on menus
-    useNames.ts           shared blue-team player names
+    useNames.ts           player names per key (default key = blue team, shared by every board; Formation Lab Team 2 uses pitchlab:names2)
   components/
     Shell.tsx             page frame: header, back button, Esc-to-go-back; on menus: Kickoff / Settings / Donate tabs (Q/E) + bottom status bar
     Profile.tsx           header profile button + Discord-style profile card (hover/click, Esc closes). Banner, avatar, decoration, nameplate and card effect (always on top; holds its last frame 5 s, then repeats) load from public/profile/ via `DEVELOPER.media` (videos loop muted; mp4 is screen-blended so black is transparent); empty slots use the drawn versions, DevName / DevLinks credit links. All read DEVELOPER in config.ts; empty urls are hidden
@@ -93,7 +93,7 @@ scripts/make-sfx.mjs      sound generator
 | `/` | Title screen (once per visit) → main menu |
 | `/learn`, `/tactics`, `/stream` | Hub menus |
 | `/learn/offside` | Offside lessons |
-| `/tactics/formations` | Formation Lab |
+| `/tactics/formations` | Formation Lab: Team 1 / Team 2 tabs (nameable, saved in `pitchlab:formation-teams`), Q–Y formation of the open tab, G switch tab, O show Team 2 |
 | `/tactics/sandbox` | Tactics Sandbox |
 | `/stream/scoreboard` | Scoreboard control panel |
 | `/stream/dock` | Compact controls for an OBS Custom Browser Dock (no Shell, no Esc-to-leave, works from ~280px) |

@@ -2,35 +2,51 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Shell } from '../components/Shell'
 import { PitchTag, ToolLayout } from '../components/ToolLayout'
 import { Btn, Kbd, Label, Segmented, Toggle } from '../components/ui'
-import { byName, FORMATIONS, OPP_PHASE, PHASE_NAME, PHASES, positions, shapeOf, type Phase, type Pt } from '../data/formations'
+import { byName, FORMATIONS, OPP_PHASE, PHASE_NAME, PHASES, positions, shapeOf, type Formation, type OppPhase, type Phase, type Pt } from '../data/formations'
 import { roleOf } from '../data/roles'
 import { FormationLines } from '../features/pitch/Lines'
 import { Pitch, toPitch, Token } from '../features/pitch/Pitch'
 import { tween } from '../features/pitch/tween'
 import { useReducedMotion } from '../lib/settings'
 import { sfx } from '../lib/sound'
+import { load, save } from '../lib/storage'
 import { useNames } from '../lib/useNames'
 
 const FKEYS = ['q', 'w', 'e', 'r', 't', 'y']
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v))
+const TEAMS_KEY = 'pitchlab:formation-teams'
+const OPP_NAME: Record<OppPhase, string> = { ...PHASE_NAME, low: 'Low block' }
+type TeamIdx = 0 | 1
+type Sel = { team: TeamIdx; i: number } | null
 
 export default function FormationLab() {
   const reduce = useReducedMotion()
+  const [teamNames, setTeamNames] = useState<[string, string]>(() => load(TEAMS_KEY, ['Team 1', 'Team 2']))
+  const [tab, setTab] = useState<TeamIdx>(0)
   const [form, setForm] = useState('4-3-3')
+  const [form2, setForm2] = useState('4-4-2')
+  const [show2, setShow2] = useState(false)
   const [phase, setPhase] = useState<Phase>('def')
-  const [opp, setOpp] = useState<string>('none')
   const [lines, setLines] = useState(true)
   const [move, setMove] = useState(false)
   const [showNames, setShowNames] = useState(true)
-  const [sel, setSel] = useState<number | null>(null)
+  const [rawSel, setSel] = useState<Sel>(null)
   const [custom, setCustom] = useState(false)
-  const { names, setName } = useNames()
-  const f = byName(form), of = opp === 'none' ? null : byName(opp)
+  const team1 = useNames(), team2 = useNames('pitchlab:names2')
+  const opp = show2 ? form2 : 'none'
+  const sel = rawSel?.team === 1 && !show2 ? null : rawSel
+  const f = byName(form), of = show2 ? byName(form2) : null
   const [blue, setBlue] = useState<Pt[]>(() => positions(byName('4-3-3'), 'def'))
   const [red, setRed] = useState<Pt[]>(() => Array.from({ length: 11 }, () => ({ x: 110, y: 34 })))
   const cancel = useRef<() => void>(() => {})
   const svg = useRef<SVGSVGElement>(null)
   const posRef = useRef({ blue, red }); posRef.current = { blue, red }
+
+  useEffect(() => { save(TEAMS_KEY, teamNames) }, [teamNames])
+  const nameOf = (t: TeamIdx) => teamNames[t].trim() || `Team ${t + 1}`
+  const rename = (t: TeamIdx, v: string) => setTeamNames(n => (t === 0 ? [v, n[1]] : [n[0], v]))
+  // Picking a formation for Team 2 also puts Team 2 on the pitch.
+  const pick = useCallback((t: TeamIdx, name: string) => { sfx.play('select'); if (t === 0) setForm(name); else { setForm2(name); setShow2(true) } }, [])
 
   // animate whenever the setup changes
   useEffect(() => {
@@ -48,26 +64,28 @@ export default function FormationLab() {
       if ((e.code === 'Space' && (e.target as HTMLElement).closest('button, a, [role="switch"]')) || (e.target as HTMLElement).closest('input, textarea, select') || e.metaKey || e.ctrlKey || e.altKey) return
       const k = e.key.toLowerCase()
       const fi = FKEYS.indexOf(k)
-      if (fi >= 0) { sfx.play('select'); setForm(FORMATIONS[fi].name) }
+      if (fi >= 0) pick(tab, FORMATIONS[fi].name)
       else if (e.code === 'Space') { e.preventDefault(); sfx.play('whoosh'); cyclePhase() }
       else if (['1', '2', '3'].includes(k)) { sfx.play('whoosh'); setPhase(PHASES[+k - 1]) }
       else if (k === 'l') { sfx.play('toggle'); setLines(v => !v) }
       else if (k === 'm') { sfx.play('toggle'); setMove(v => !v) }
       else if (k === 'n') { sfx.play('toggle'); setShowNames(v => !v) }
-      else if (k === 'o') { sfx.play('toggle'); setOpp(o => { const all = ['none', ...FORMATIONS.map(x => x.name)]; return all[(all.indexOf(o) + 1) % all.length] }) }
+      else if (k === 'o') { sfx.play('toggle'); setShow2(v => !v) }
+      else if (k === 'g') { sfx.play('toggle'); setTab(t => (t ? 0 : 1)) }
       else if (k === 'escape') setSel(null)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [cyclePhase])
+  }, [cyclePhase, pick, tab])
 
-  // drag players to customise
+  // drag players to customise; tapping a player opens their team's tab
   const drag = useRef<{ team: 'b' | 'r'; i: number } | null>(null)
   const onDown = (e: React.PointerEvent) => {
     const id = (e.target as Element).closest('[data-token]')?.getAttribute('data-token'); if (!id) return
     const [team, i] = id.split(':'); cancel.current()
     drag.current = { team: team as 'b' | 'r', i: +i }
-    if (team === 'b') { setSel(+i); sfx.play('hover') }
+    const t: TeamIdx = team === 'b' ? 0 : 1
+    setSel({ team: t, i: +i }); setTab(t); sfx.play('hover')
     ;(e.currentTarget as Element).setPointerCapture(e.pointerId); e.preventDefault()
   }
   const onMove = (e: React.PointerEvent) => {
@@ -84,69 +102,85 @@ export default function FormationLab() {
   const from = positions(f, fromPh), to = positions(f, phase)
 
   const pitch = (
-    <Pitch ref={svg} thirds onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp} aria-label={`${form} formation, ${PHASE_NAME[phase]}`}>
-      <text x="-1.5" y="-4.4" fill="#fff" fontSize="2" fontFamily="Saira Condensed, sans-serif" fontWeight={800} opacity=".85">BLUE ATTACKS →</text>
+    <Pitch ref={svg} thirds onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp} aria-label={`${nameOf(0)} in ${form}, ${PHASE_NAME[phase]}${of ? `, ${nameOf(1)} in ${of.name}` : ''}`}>
+      <text x="-1.5" y="-4.4" fill="#fff" fontSize="2" fontFamily="Saira Condensed, sans-serif" fontWeight={800} opacity=".85">{nameOf(0).toUpperCase()} ATTACKS →</text>
       {move && from.map((p, i) => {
         const q = to[i]; if (i === 0 || Math.hypot(q.x - p.x, q.y - p.y) < 2) return null
         return <g key={i} opacity=".85"><circle cx={p.x} cy={p.y} r="1.2" fill="none" stroke="#fff" strokeWidth=".25" opacity=".6" />
           <line x1={p.x} y1={p.y} x2={q.x} y2={q.y} stroke="#fff" strokeWidth=".35" strokeDasharray="1 .7" markerEnd="url(#arrW)" /></g>
       })}
       {lines && of && <FormationLines f={of} ph={OPP_PHASE[phase]} pts={red} color="#ffd6d6" />}
-      {lines && <FormationLines f={f} ph={phase} pts={blue} color="#e3e9ff" badges />}
-      {of && red.map((p, i) => <Token key={'r' + i} dataId={`r:${i}`} x={p.x} y={p.y} team="away" label={of.s[i][0]} />)}
-      {blue.map((p, i) => <Token key={'b' + i} dataId={`b:${i}`} x={p.x} y={p.y} team="home" label={f.s[i][0]} name={showNames ? names[i] : ''} halo={sel === i} />)}
+      {lines && <FormationLines f={f} ph={phase} pts={blue} color="#e3e9ff" />}
+      {of && red.map((p, i) => <Token key={'r' + i} dataId={`r:${i}`} x={p.x} y={p.y} team="away" label={of.s[i][0]} name={showNames ? team2.names[i] : ''} halo={sel?.team === 1 && sel.i === i} />)}
+      {blue.map((p, i) => <Token key={'b' + i} dataId={`b:${i}`} x={p.x} y={p.y} team="home" label={f.s[i][0]} name={showNames ? team1.names[i] : ''} halo={sel?.team === 0 && sel.i === i} />)}
     </Pitch>
   )
 
-  const role = sel !== null ? roleOf(f.s[sel][0]) : null
+  const tf = tab === 0 ? f : byName(form2)
+  const tPhase: OppPhase = tab === 0 ? phase : OPP_PHASE[phase]
+  const tNames = tab === 0 ? team1 : team2
+  const selF = sel ? (sel.team === 0 ? f : of) : null
+  const role = sel && selF ? roleOf(selF.s[sel.i][0]) : null
   const panel = (
     <>
-      <div>
-        <Label>Formation</Label>
-        <div className="grid grid-cols-3 gap-1.5">
-          {FORMATIONS.map((x, i) => (
-            <button key={x.name} type="button" aria-pressed={x.name === form} onClick={() => { sfx.play('select'); setForm(x.name) }}
-              className={`focus-invert rounded-md border py-2 font-display font-extrabold text-[20px] leading-none tracking-wide transition-colors flex flex-col items-center gap-1
-                ${x.name === form ? 'bg-flood-500 border-flood-500 text-night-950' : 'border-night-600 hover:border-flood-500'}`}>
-              {x.name}<span className={`font-mono text-[10px] font-medium ${x.name === form ? 'text-night-950/60' : 'text-mist-400'}`}>{FKEYS[i].toUpperCase()}</span>
-            </button>
-          ))}
-        </div>
+      {/* Team tabs */}
+      <div role="tablist" aria-label="Teams" className="grid grid-cols-2 gap-1 p-1 rounded-lg bg-night-950/70 border border-line">
+        {([0, 1] as const).map(t => (
+          <button key={t} type="button" role="tab" id={`team-tab-${t}`} aria-selected={tab === t} aria-controls="team-panel" onClick={() => { sfx.play('toggle'); setTab(t) }}
+            className={`focus-invert h-11 px-2 rounded-md flex items-center justify-center gap-2 min-w-0 font-display font-bold uppercase tracking-wide text-[17px] ${tab === t ? 'bg-flood-500 text-night-950' : 'text-mist-300 hover:bg-white/10'}`}>
+            <span className={`h-3 w-3 rounded-full shrink-0 ring-1 ring-white/60 ${t === 0 ? 'bg-home' : 'bg-away'} ${t === 1 && !show2 ? 'opacity-40' : ''}`} />
+            <span className="truncate">{nameOf(t)}</span>
+          </button>
+        ))}
       </div>
-      <div>
-        <Label>Phase of play</Label>
+
+      <div role="tabpanel" id="team-panel" aria-labelledby={`team-tab-${tab}`} className="flex flex-col gap-4">
+        <div>
+          <Label>Team name</Label>
+          <input value={teamNames[tab]} maxLength={20} placeholder={`Team ${tab + 1}`} onChange={e => rename(tab, e.target.value)} aria-label={`Team ${tab + 1} name`}
+            className="w-full h-10 rounded-md bg-night-900 border border-night-600 focus:border-flood-500 outline-none px-3 text-[15px] font-semibold" />
+        </div>
+        {tab === 1 && <div className="-mx-3"><Toggle on={show2} onChange={setShow2} label={`Show ${nameOf(1)} on the pitch`} hint="O" /></div>}
+        <div>
+          <Label>Formation</Label>
+          <div className="grid grid-cols-3 gap-1.5">
+            {FORMATIONS.map((x, i) => {
+              const on = x.name === (tab === 0 ? form : form2) && (tab === 0 || show2)
+              return (
+                <button key={x.name} type="button" aria-pressed={on} onClick={() => pick(tab, x.name)}
+                  className={`focus-invert rounded-md border py-2 font-display font-extrabold text-[20px] leading-none tracking-wide transition-colors flex flex-col items-center gap-1
+                    ${on ? 'bg-flood-500 border-flood-500 text-night-950' : 'border-night-600 hover:border-flood-500'}`}>
+                  {x.name}<span className={`font-mono text-[10px] font-medium ${on ? 'text-night-950/60' : 'text-mist-400'}`}>{FKEYS[i].toUpperCase()}</span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+        {(tab === 0 || show2) && <ShapeCard f={tf} ph={tPhase} />}
+        <Squad f={tf} names={tNames.names} setName={tNames.setName} team={tab} sel={sel} onPick={i => { sfx.play('hover'); setSel({ team: tab, i }) }} />
+      </div>
+
+      <div className="border-t border-line/50 pt-4">
+        <Label>Phase of play ({nameOf(0)})</Label>
         <Segmented value={phase} onChange={setPhase} options={PHASES.map((p, i) => ({ value: p, label: PHASE_NAME[p], hint: String(i + 1) }))} />
+        {of && <p className="mt-2 text-[13px] text-mist-400">{nameOf(1)}: {OPP_NAME[OPP_PHASE[phase]]}</p>}
       </div>
-      <div className="rounded-lg bg-night-900/70 border border-night-700 p-3.5">
-        <div className="flex items-baseline gap-2">
-          <span className="font-display font-extrabold text-[26px] -skew-x-6 leading-none text-flood-400">{shape}</span>
-          <span className="text-[12px] uppercase tracking-[0.18em] text-mist-400">{PHASE_NAME[phase]}</span>
-        </div>
-        <p className="mt-2 text-[15px] leading-relaxed text-mist-100">{f.d[phase]}</p>
-      </div>
-      <div>
-        <Label>Opponent</Label>
-        <select value={opp} onChange={e => { sfx.play('toggle'); setOpp(e.target.value) }} id="opp"
-          className="w-full h-10 rounded-md bg-night-900 border border-night-600 px-3 text-[15px]">
-          <option value="none">No opponent</option>
-          {FORMATIONS.map(x => <option key={x.name} value={x.name}>Opponent in {x.name}</option>)}
-        </select>
+      <div className="rounded-lg border border-night-700 p-3.5 flex flex-col gap-2">
+        {sel && role && selF ? (<>
+          <div className="flex items-center gap-2 text-[12px] uppercase tracking-[0.16em] text-mist-400">
+            <span className={`h-2.5 w-2.5 rounded-full ${sel.team === 0 ? 'bg-home' : 'bg-away'}`} />{nameOf(sel.team)}
+          </div>
+          <div className="font-display font-extrabold uppercase text-[22px] -skew-x-6 leading-none">{selF.s[sel.i][0]} · {role[1]}</div>
+          <p className="text-[14px] text-mist-300 leading-snug">{role[2]}</p>
+        </>) : (<>
+          <div className="font-display font-bold uppercase text-[18px] text-mist-300">Tap a player</div>
+          <p className="text-[14px] text-mist-400 leading-snug">See what that position does, or drag them to copy what you see on TV.</p>
+        </>)}
       </div>
       <div className="-mx-3">
         <Toggle on={lines} onChange={setLines} label="Show lines" hint="L" />
-        <Toggle on={move} onChange={setMove} label="Show movement" hint="M" />
-        <Toggle on={showNames} onChange={setShowNames} label="Show names" hint="N" />
-      </div>
-      <div className="rounded-lg border border-night-700 p-3.5 flex flex-col gap-2">
-        {role ? (<>
-          <div className="font-display font-extrabold uppercase text-[22px] -skew-x-6 leading-none">{f.s[sel!][0]} · {role[1]}</div>
-          <p className="text-[14px] text-mist-300 leading-snug">{role[2]}</p>
-          <input id="pname" value={names[sel!]} maxLength={16} placeholder="Player name (optional)" onChange={e => setName(sel!, e.target.value)}
-            className="h-10 rounded-md bg-night-900 border border-night-600 px-3 text-[15px]" />
-        </>) : (<>
-          <div className="font-display font-bold uppercase text-[18px] text-mist-300">Tap a player</div>
-          <p className="text-[14px] text-mist-400 leading-snug">See what that position does, give them a name, or drag them to copy what you see on TV.</p>
-        </>)}
+        <Toggle on={move} onChange={setMove} label={`Show movement (${nameOf(0)})`} hint="M" />
+        <Toggle on={showNames} onChange={setShowNames} label="Show player names" hint="N" />
       </div>
       <Btn variant="ghost" onClick={reset} sound={null} disabled={!custom}>Reset positions</Btn>
     </>
@@ -156,9 +190,52 @@ export default function FormationLab() {
     <Shell back="/tactics" eyebrow="Tactic boards" title="Formation Lab" wide>
       <ToolLayout pitch={pitch} panel={panel}
         tagLeft={<PitchTag big>{custom ? `${form} · custom` : shape === form ? form : `${form} → ${shape}`}</PitchTag>}
-        tagRight={<PitchTag>{PHASE_NAME[phase]}{of ? ` · vs ${of.name}` : ''}</PitchTag>}
-        hotkeys={<><span className="inline-flex gap-1.5 items-center"><Kbd>Q</Kbd>–<Kbd>Y</Kbd> formations</span><span className="inline-flex gap-1.5 items-center"><Kbd>Space</Kbd> next phase</span><span className="inline-flex gap-1.5 items-center"><Kbd>O</Kbd> opponent</span></>} />
+        tagRight={<PitchTag>{PHASE_NAME[phase]}{of ? ` · vs ${nameOf(1)} (${of.name})` : ''}</PitchTag>}
+        hotkeys={<><span className="inline-flex gap-1.5 items-center"><Kbd>Q</Kbd>–<Kbd>Y</Kbd> formation</span><span className="inline-flex gap-1.5 items-center"><Kbd>G</Kbd> switch team</span><span className="inline-flex gap-1.5 items-center"><Kbd>Space</Kbd> next phase</span><span className="inline-flex gap-1.5 items-center"><Kbd>O</Kbd> show team 2</span></>} />
       <p className="max-w-[1600px] mx-auto mt-3 text-[13px] text-mist-400">Shapes are typical modern versions, simplified. Real teams adjust every match.</p>
     </Shell>
+  )
+}
+
+/** The team's shape in this phase (e.g. 2-3-5) and what it's doing. */
+function ShapeCard({ f, ph }: { f: Formation; ph: OppPhase }) {
+  const shape = shapeOf(f, ph, positions(f, ph))
+  return (
+    <div className="rounded-lg bg-night-900/70 border border-night-700 p-3.5">
+      <div className="flex items-baseline gap-2">
+        <span className="font-display font-extrabold text-[26px] -skew-x-6 leading-none text-flood-400">{shape}</span>
+        <span className="text-[12px] uppercase tracking-[0.18em] text-mist-400">{OPP_NAME[ph]}</span>
+      </div>
+      <p className="mt-2 text-[15px] leading-relaxed text-mist-100">{ph === 'low' ? 'Defends deep and narrow, close to its own goal.' : f.d[ph]}</p>
+    </div>
+  )
+}
+
+/** All 11 positions with a name box each. Folded by default to keep the panel short. */
+function Squad({ f, names, setName, team, sel, onPick }: { f: Formation; names: string[]; setName: (i: number, v: string) => void; team: TeamIdx; sel: Sel; onPick: (i: number) => void }) {
+  const [open, setOpen] = useState(false)
+  const filled = names.filter(n => n.trim()).length
+  return (
+    <div className="rounded-lg border border-night-700">
+      <button type="button" aria-expanded={open} onClick={() => { sfx.play('toggle'); setOpen(o => !o) }}
+        className="focus-invert w-full h-10 px-3 flex items-center gap-2 rounded-lg text-[12px] font-semibold tracking-[0.16em] uppercase text-mist-400">
+        Player names<span className="normal-case tracking-normal font-normal">{filled}/11</span><span className="ml-auto text-[16px]">{open ? '−' : '+'}</span>
+      </button>
+      {open && (
+        <ol className="px-2 pb-2 flex flex-col gap-1">
+          {f.s.map((slot, i) => {
+            const on = sel?.team === team && sel.i === i
+            return (
+              <li key={i} className="flex items-center gap-2">
+                <button type="button" onClick={() => onPick(i)} aria-label={`Select ${slot[0]}`}
+                  className={`focus-invert w-12 h-8 shrink-0 rounded font-display font-bold text-[14px] tracking-wide border ${on ? 'bg-flood-500 border-flood-500 text-night-950' : 'border-night-600 hover:border-flood-500'}`}>{slot[0]}</button>
+                <input value={names[i]} maxLength={16} placeholder="Name" onChange={e => setName(i, e.target.value)} onFocus={() => onPick(i)} aria-label={`${slot[0]} name`}
+                  className="flex-1 min-w-0 h-8 rounded-md bg-night-900 border border-night-600 focus:border-flood-500 outline-none px-2.5 text-[14px]" />
+              </li>
+            )
+          })}
+        </ol>
+      )}
+    </div>
   )
 }

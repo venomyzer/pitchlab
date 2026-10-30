@@ -52,7 +52,7 @@ export function FormationPreview() {
   const b = positions(f, 'build'), r = positions(o, 'def', true)
   return (
     <PitchFrame>
-      <FormationLines f={f} ph="build" pts={b} color="#e3e9ff" badges />
+      <FormationLines f={f} ph="build" pts={b} color="#e3e9ff" />
       {r.map((p, i) => <Token key={'r' + i} x={p.x} y={p.y} team="away" label={o.s[i][0]} />)}
       {b.map((p, i) => <Token key={'b' + i} x={p.x} y={p.y} team="home" label={f.s[i][0]} />)}
     </PitchFrame>
