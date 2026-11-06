@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { Background } from '../components/Background'
 import { Shell } from '../components/Shell'
 import { MenuList } from '../components/MenuList'
-import { OffsidePreview, SandboxPreview, ScoreboardPreview } from '../components/MenuPreviews'
+import { LineupPreview, OffsidePreview, QuizPreview, SandboxPreview, ScoreboardPreview } from '../components/MenuPreviews'
 import { APP_TAGLINE } from '../config'
 import { DevName } from '../components/Profile'
 import { sfx } from '../lib/sound'
@@ -60,14 +60,16 @@ function MainMenu() {
       <Shell menu>
         <MenuList heading={<h1 className="font-display font-extrabold uppercase text-5xl md:text-6xl -skew-x-6 mb-6">Kick off</h1>} items={[
           { to: '/stream', label: 'Streamer Tools', accent: '#ff6b5a', badge: 'LIVE', preview: <ScoreboardPreview />,
-            desc: 'Scoreboard overlay for OBS with goal and card pop-ups. Control it from a panel or with hotkeys.' },
+            desc: 'Scoreboard overlay for OBS with goal and card pop-ups, plus lower thirds, prediction card and player ratings.' },
           { to: '/tactics', label: 'Tactic Boards', accent: '#5ad1ff', preview: <SandboxPreview />,
-            desc: 'Formations in every phase of play, plus a sandbox to rebuild goals. Press H for a clean view on stream.' },
+            desc: 'Formations, a sandbox, set pieces, lineups and match rebuilds. Press H for a clean view on stream.' },
           { to: '/learn', label: 'Learn Football', accent: '#ffb31a', preview: <OffsidePreview />,
-            desc: 'Offside and formations explained with moving players. Use them on stream to explain a decision.' },
-          { label: 'Football Quiz', desc: 'Test what you know about the rules. Coming in a later update.' },
-          { label: 'Lineup Cards', desc: 'Starting elevens as stream graphics. Coming in a later update.' },
-          { label: 'Match Notes', desc: 'Notes you keep during a match. Coming in a later update.' },
+            desc: 'Offside, fouls and cards, how leagues work and football words, explained with moving players.' },
+          { to: '/learn/quiz', label: 'Football Quiz', accent: '#ffb31a', preview: <QuizPreview />,
+            desc: 'Ten questions at a time on offside, fouls, rules, leagues and football words.' },
+          { to: '/tactics/lineup', label: 'Lineup Cards', accent: '#5ad1ff', preview: <LineupPreview />,
+            desc: 'Pick a starting eleven with shirt numbers, then show it on stream as a lineup card.' },
+          { label: 'More Features', desc: 'More tools for streamers and fans. Coming in a later update.' },
         ]} />
       </Shell>
     </motion.div>

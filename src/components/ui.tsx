@@ -1,4 +1,4 @@
-import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from 'react'
+import { forwardRef, useEffect, useState, type ButtonHTMLAttributes, type ReactNode } from 'react'
 import { sfx, type SfxName } from '../lib/sound'
 
 type BtnProps = ButtonHTMLAttributes<HTMLButtonElement> & {
@@ -69,5 +69,15 @@ export function Segmented<T extends string>({ value, options, onChange, size = '
         </button>
       ))}
     </div>
+  )
+}
+
+/** Two-step confirm for clearing a list, like Reset match. */
+export function ConfirmBtn({ label, confirm, onConfirm, disabled }: { label: string; confirm: string; onConfirm: () => void; disabled?: boolean }) {
+  const [armed, setArmed] = useState(false)
+  useEffect(() => { if (!armed) return; const t = setTimeout(() => setArmed(false), 3500); return () => clearTimeout(t) }, [armed])
+  return (
+    <Btn size="sm" variant={armed ? 'danger' : 'ghost'} sound={armed ? 'back' : 'toggle'} disabled={disabled}
+      onClick={() => { if (armed) { onConfirm(); setArmed(false) } else setArmed(true) }}>{armed ? confirm : label}</Btn>
   )
 }

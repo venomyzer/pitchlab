@@ -1,0 +1,72 @@
+// Football words, in plain English. General definitions only: no real players, teams or statistics.
+export type Cat = 'Match' | 'Rules' | 'Tactics' | 'Skills' | 'Pitch' | 'Competitions'
+export type Word = { term: string; cat: Cat; def: string; also?: string }
+export const CATS: Cat[] = ['Match', 'Rules', 'Tactics', 'Skills', 'Pitch', 'Competitions']
+
+export const WORDS: Word[] = [
+  // Match
+  { term: 'Clean sheet', cat: 'Match', def: 'A match where a team doesn’t let in a goal. Usually credited to the goalkeeper and defenders.' },
+  { term: 'Hat-trick', cat: 'Match', def: 'Three goals by the same player in one match.' },
+  { term: 'Brace', cat: 'Match', def: 'Two goals by the same player in one match.' },
+  { term: 'Assist', cat: 'Match', def: 'The pass (or touch) that sets up a goal for a team-mate.' },
+  { term: 'Own goal', cat: 'Match', def: 'When a player puts the ball into their own team’s net. The goal counts for the other team.' },
+  { term: 'Stoppage time', cat: 'Match', def: 'Minutes added at the end of each half for time lost to injuries, substitutions, checks and time-wasting. The fourth official shows the minimum on a board.', also: 'Added time, injury time' },
+  { term: 'Equaliser', cat: 'Match', def: 'A goal that makes the score level.' },
+  { term: 'Winner', cat: 'Match', def: 'The goal that decides the match, usually the last one that puts a team ahead for good.' },
+  { term: 'Comeback', cat: 'Match', def: 'When a team that was losing ends up drawing or winning.' },
+  { term: 'Derby', cat: 'Match', def: 'A match between two rival teams, usually from the same city or area.' },
+  { term: 'xG', cat: 'Match', def: 'Expected goals. A number between 0 and 1 for each shot, estimating how often a shot like it is scored. Added up, it shows how good a team’s chances were.' },
+  { term: 'Woodwork', cat: 'Match', def: 'The goalposts and crossbar. “Hit the woodwork” means the ball struck the frame of the goal.' },
+  // Rules
+  { term: 'Offside', cat: 'Rules', def: 'An attacker is in an offside position if, when a team-mate plays the ball, they are in the other team’s half and nearer the goal line than both the ball and the second-last defender. It’s only an offence if they then get involved in play.' },
+  { term: 'Advantage', cat: 'Rules', def: 'The referee lets play go on after a foul because stopping would help the team that fouled.' },
+  { term: 'Booking', cat: 'Rules', def: 'A yellow card. Two in the same match means a red card.', also: 'Caution' },
+  { term: 'Sending-off', cat: 'Rules', def: 'A red card. The player leaves the pitch and the team plays the rest of the match with one fewer player.', also: 'Dismissal' },
+  { term: 'Direct free kick', cat: 'Rules', def: 'A free kick that can go straight into the goal. Given for fouls such as tripping, pushing or handball.' },
+  { term: 'Indirect free kick', cat: 'Rules', def: 'A free kick where another player must touch the ball before a goal can count. The referee holds an arm up to show it.' },
+  { term: 'Penalty', cat: 'Rules', def: 'A shot from the penalty mark, 11 m out, with only the keeper to beat. Given when a defender commits a direct free kick offence in their own penalty area.', also: 'Spot kick' },
+  { term: 'Handball', cat: 'Rules', def: 'Touching the ball with a hand or arm on purpose, or with the arm making the body unnaturally bigger. Goalkeepers can handle it inside their own penalty area.' },
+  { term: 'Dropped ball', cat: 'Rules', def: 'How play restarts after the referee stops it for something that isn’t a foul, such as an injury. The ball is dropped for one player.' },
+  { term: 'VAR', cat: 'Rules', def: 'Video assistant referee. Match officials watching replays who can advise the referee on goals, penalties, straight red cards and mistaken identity.' },
+  // Tactics
+  { term: 'Formation', cat: 'Tactics', def: 'How a team lines up, counted from defence to attack, not counting the keeper. 4-3-3 means four defenders, three midfielders and three forwards.' },
+  { term: 'Pressing', cat: 'Tactics', def: 'Chasing the other team as a group to win the ball back quickly, often high up the pitch.', also: 'The press' },
+  { term: 'Counter-attack', cat: 'Tactics', def: 'Attacking fast straight after winning the ball, before the other team can get back into shape.', also: 'Counter, break' },
+  { term: 'Low block', cat: 'Tactics', def: 'Defending deep near your own box with players close together, leaving little space behind.' },
+  { term: 'High line', cat: 'Tactics', def: 'A defence that stands far up the pitch, which squeezes space but leaves room behind for balls over the top.' },
+  { term: 'Offside trap', cat: 'Tactics', def: 'Defenders step up together just before a pass so attackers are left in an offside position.' },
+  { term: 'Overlap', cat: 'Tactics', def: 'A player (often a full-back) runs around the outside of a team-mate who has the ball.' },
+  { term: 'Underlap', cat: 'Tactics', def: 'Like an overlap, but the run goes inside the team-mate, between them and the centre of the pitch.' },
+  { term: 'Half-space', cat: 'Tactics', def: 'The channel between the centre of the pitch and the wing. A dangerous place to receive the ball.' },
+  { term: 'Transition', cat: 'Tactics', def: 'The moment the ball changes teams. How quickly players switch between attacking and defending.' },
+  { term: 'Park the bus', cat: 'Tactics', def: 'Slang for defending with almost every player behind the ball, usually to protect a lead.' },
+  { term: 'False nine', cat: 'Tactics', def: 'A centre-forward who drops into midfield instead of staying up front, pulling defenders out of position.' },
+  { term: 'Box-to-box', cat: 'Tactics', def: 'A midfielder who covers both ends: helping defend their own box and arriving in the other team’s box to attack.' },
+  // Skills
+  { term: 'Through ball', cat: 'Skills', def: 'A pass into the space behind the defence for a team-mate to run onto.' },
+  { term: 'Cross', cat: 'Skills', def: 'A pass from a wide area into the penalty area, aimed at a team-mate.' },
+  { term: 'Cut-back', cat: 'Skills', def: 'A pass from near the goal line pulled back towards the penalty spot, away from the goal.' },
+  { term: 'One-two', cat: 'Skills', def: 'Pass to a team-mate, run past the defender and get the ball straight back.', also: 'Give-and-go, wall pass' },
+  { term: 'Nutmeg', cat: 'Skills', def: 'Playing the ball through an opponent’s legs.' },
+  { term: 'Volley', cat: 'Skills', def: 'Kicking the ball before it touches the ground.' },
+  { term: 'Header', cat: 'Skills', def: 'Playing the ball with the head, to pass, clear or score.' },
+  { term: 'Bicycle kick', cat: 'Skills', def: 'An overhead kick, with the body in the air and the ball kicked backwards over the head.', also: 'Overhead kick' },
+  { term: 'Dummy', cat: 'Skills', def: 'Pretending to play the ball and letting it run past, to fool a defender.' },
+  { term: 'Second ball', cat: 'Skills', def: 'The loose ball after a header or a blocked pass. Teams try to win it to keep pressure on.' },
+  // Pitch
+  { term: 'Penalty area', cat: 'Pitch', def: 'The big box in front of each goal (16.5 m deep). Fouls by defenders here are penalties, and the keeper can use hands here.', also: 'The box, 18-yard box' },
+  { term: 'Six-yard box', cat: 'Pitch', def: 'The small box right in front of the goal. Goal kicks can be taken from anywhere inside it.', also: 'Goal area' },
+  { term: 'Penalty arc', cat: 'Pitch', def: 'The curve on the edge of the penalty area. It keeps players at least 9.15 m from the penalty mark during a penalty.', also: 'The D' },
+  { term: 'Touchline', cat: 'Pitch', def: 'The two long side lines. When the ball goes over one, it’s a throw-in.', also: 'Sideline' },
+  { term: 'Goal line', cat: 'Pitch', def: 'The short lines at each end. The ball must cross it completely, between the posts and under the bar, for a goal.', also: 'Byline (the part outside the goal)' },
+  { term: 'Final third', cat: 'Pitch', def: 'The third of the pitch nearest the other team’s goal, where attacks end with a chance or a shot.' },
+  // Competitions
+  { term: 'Promotion', cat: 'Competitions', def: 'Moving up to a higher division, usually by finishing near the top of the table.' },
+  { term: 'Relegation', cat: 'Competitions', def: 'Dropping down to a lower division, usually by finishing near the bottom of the table.' },
+  { term: 'Goal difference', cat: 'Competitions', def: 'Goals scored minus goals let in. Often used to split teams level on points.', also: 'GD' },
+  { term: 'Aggregate', cat: 'Competitions', def: 'The total score over two matches (two legs) between the same teams.' },
+  { term: 'Away goals rule', cat: 'Competitions', def: 'An old tiebreaker: in a two-legged tie level on aggregate, the team with more goals away from home went through. Many competitions have dropped it.' },
+  { term: 'Extra time', cat: 'Competitions', def: 'Two periods of up to 15 minutes each, played when a knockout match must have a winner and the score is level.' },
+  { term: 'Penalty shoot-out', cat: 'Competitions', def: 'Teams take turns shooting from the penalty mark, five each to start, then one each until one team is ahead after the same number of kicks.', also: 'Shoot-out, pens' },
+  { term: 'Group stage', cat: 'Competitions', def: 'The first part of many tournaments: small groups that play like mini leagues, with the top teams going through to the knockouts.' },
+]

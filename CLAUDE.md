@@ -6,9 +6,9 @@ Guidance for Claude Code when working in this repo. Read this before making chan
 
 **PitchLab · by VENOMYZER** is a football tools web app with a console-game style UI (think the main menu of an EA Sports FC game, but with all-original graphics and sounds). **Streamer Tools is the main function**: it gets the hero tile on the main menu and new work should favour it. Three sections, in priority order:
 
-- **Streamer Tools**: match scoreboard overlay for OBS plus its control panel
+- **Streamer Tools**: match scoreboard overlay for OBS plus its control panel; lower thirds, prediction card, player ratings and lineup card on a second graphics overlay
 - **Tactic Boards**: Formation Lab and Tactics Sandbox (also used on stream via clean view)
-- **Learn Football**: interactive lessons (offside so far)
+- **Learn Football**: offside lessons, fouls & cards scenarios, how leagues work, football words, quiz mode
 
 Target users: football streamers (watch-along streams) first, and football fans learning the game. The app must be good enough that other streamers adopt it, so polish and reliability matter more than feature count.
 
@@ -57,6 +57,7 @@ src/
     sound.ts              sfx.play(name). Throttles hover, respects settings
     settings.tsx          SettingsProvider, useSettings, useReducedMotion
     storage.ts            safe localStorage (load/loadRaw/save never throw)
+    synced.ts             useSynced (BroadcastChannel + storage event + 1 s poll, newer updatedAt wins) and useUndoable (history, Ctrl Z, typing in one field = one step)
     spatialNav.ts         arrow-key / W-S navigation between [data-nav] elements on menus
     useNames.ts           player names per key (default key = blue team, shared by every board; Formation Lab Team 2 uses pitchlab:names2)
   components/
@@ -65,7 +66,7 @@ src/
     MenuList.tsx          console-style menu: vertical list + preview of the focused item (no `to` = locked "Soon")
     MenuPreviews.tsx      drawn previews for the menu (real ScoreboardView / Pitch with demo data)
     ToolLayout.tsx        board layout: pitch + side panel, H = clean view, Shift+F = fullscreen
-    ui.tsx                Btn, Kbd, Label, Panel, Toggle, Segmented
+    ui.tsx                Btn, Kbd, Label, Panel, Toggle, Segmented, ConfirmBtn (two-step confirm)
     CopyField.tsx         link + big Copy button for OBS links (falls back to select + "Press Ctrl C")
     Icons.tsx             hand-drawn line icons (24px, currentColor)
     Background.tsx        stadium photo backdrop (public/bg/menu-1920.jpg) under a green scrim; `dim` on tool screens
@@ -73,11 +74,21 @@ src/
     formations.ts         6 formations × 3 phases; positions(), units(), shapeOf()
     roles.ts              position descriptions
     offside.ts            7 lessons + sandbox; isOffsidePosition()
+    fouls.ts              10 foul scenarios (Law 12) with the right restart + card
+    setpieces.ts          corner, wide/central free kick, penalty, throw-in start positions + rule notes
+    lineup.ts             lineupSpots() (rows from the formation name) and slotLabels()
+    leagues.ts            mini league fixtures, table() sorting, lesson copy
+    words.ts              glossary (plain-English definitions, no real teams or players)
+    quiz.ts               fixed questions + ones generated from fouls.ts and words.ts; makeRound()
   features/
     pitch/Pitch.tsx       SVG pitch in metres (105×68), Token, Ball, toPitch()
     pitch/Lines.tsx       formation line polylines
     pitch/Pitch3D.tsx     soft 3D camera view: flat <Pitch> tilted with a CSS matrix3d (homography from a 4-corner quad), upright Disc3D tokens drawn on top at projected spots; ref.toPitch() inverts pointer → metres
     pitch/tween.ts        rAF tween over arrays of points
+    board/TacticsBoard.tsx  drag/draw/frames/save-slot board shared by Sandbox, Set Pieces and Match Rebuild (setup section, labels, captions are props)
+    graphics/state.ts     graphics state (one graphic on air at a time), pure actions `G`, useGraphicsControl (undo)
+    graphics/GraphicsView.tsx  lower third, prediction card, ratings and lineup card on a 1920×1080 stage
+    graphics/GraphicsPage.tsx  control-page frame: preview, Show on stream (T), look, OBS link
     scoreboard/state.ts   scoreboard state, sync, clock maths, pure actions `A`
     scoreboard/ScoreboardView.tsx   the on-stream graphic (1920×1080 stage)
     scoreboard/hotkeys.ts shared hotkeys for panel, dock + overlay
@@ -94,12 +105,21 @@ scripts/make-sfx.mjs      sound generator
 | `/` | Title screen (once per visit) → main menu |
 | `/learn`, `/tactics`, `/stream` | Hub menus |
 | `/learn/offside` | Offside lessons |
+| `/learn/fouls` | Fouls & Cards: watch a challenge, pick restart (1–4) and card (N/Y/C) |
+| `/learn/leagues` | How Leagues Work: lessons + 4-team league table and cup bracket (saved in `pitchlab:league`) |
+| `/learn/words` | Football Words glossary (`/` focuses search) |
+| `/learn/quiz` | Quiz Mode: 10-question rounds by topic, best scores in `pitchlab:quiz-best` |
 | `/tactics/formations` | Formation Lab: Team 1 / Team 2 tabs (nameable, saved in `pitchlab:formation-teams`), Q–Y formation of the open tab, G switch tab, O show Team 2, V 3D / flat view (saved in `pitchlab:formation-3d`, 3D by default) |
 | `/tactics/sandbox` | Tactics Sandbox |
+| `/tactics/lineup` | Lineup Builder: eleven + numbers, subs, coach; names shared with every board; T shows the lineup card on stream |
+| `/tactics/set-pieces` | Set Pieces board (slots `pitchlab:setpiece:N`) |
+| `/tactics/rebuild` | Match Rebuild: captioned frames (slots `pitchlab:rebuild:N`) + match notes (`pitchlab:match-notes`) |
 | `/stream/scoreboard` | Scoreboard control panel |
 | `/stream/dock` | Compact controls for an OBS Custom Browser Dock (no Shell, no Esc-to-leave, works from ~280px) |
 | `/stream/guide` | OBS setup guide |
+| `/stream/lower-thirds`, `/stream/prediction`, `/stream/ratings` | Graphics control pages (T = show / hide, Ctrl Z = undo) |
 | `/overlay/scoreboard` | OBS browser source. No Shell, transparent, 1920×1080 scaled to fit |
+| `/overlay/graphics` | Second OBS browser source for the other graphics. Same rules; `?show=lower` (or prediction, ratings, lineup) for one graphic only |
 | `/settings` | Sound, motion, hints, delete saved data |
 | `/donate` | Support the developer. Links out to `DONATE_URL` in `src/config.ts` |
 
@@ -122,6 +142,8 @@ There is no server. The panel and overlay sync through:
 3. a 1-second `localStorage` poll as a last resort
 
 Conflicts resolve by `updatedAt` (newer wins). **This only works when the panel and overlay run in the same browser profile**, i.e. both inside OBS (overlay as a Browser Source, panel as a Custom Browser Dock), or both in Chrome. Don't promise phone control. That would need a relay server, which rule 1 rules out.
+
+The graphics overlay uses the same three paths (`pitchlab-graphics` channel, `pitchlab:graphics` key) via `lib/synced.ts`. Its actions live on `G` in `features/graphics/state.ts`; control pages change it only through `update()` from `useGraphicsControl` so every change is undoable.
 
 State shape is versioned (`v: 1`). If you change `State` in `features/scoreboard/state.ts`, keep `readStored()` merging defaults so old saved data still loads. Bump `v` and migrate if a field changes meaning.
 
@@ -173,7 +195,8 @@ Plain, short, specific. Write for someone who doesn't watch football. Avoid hype
 - Libraries are split into a `vendor` chunk (~430 kB: Framer Motion + Router + React) in `vite.config.ts`; app code is ~76 kB. Consider `LazyMotion` if it grows.
 - `public/profile/` media is ~15 MB (avatar.gif alone 7.6 MB). Convert large GIFs to mp4/webm before release.
 - Not yet tested in real OBS. Before release, test all three setups in `/stream/guide` on OBS 31+.
-- Coming-soon tiles (planned): Fouls & Cards, How Leagues Work, Football Words, Quiz Mode, Lineup Builder/Cards, Set Pieces, Match Rebuild/Notes, Lower Thirds, Prediction Card, Player Ratings.
+- Coming-soon tile: More Features on the main menu (locked). The graphics control pages have no compact OBS dock yet (the full pages work as a Custom Browser Dock at ~500px+).
+- Menu previews import the learn data, so the main chunk grew to ~108 kB.
 
 ## Before finishing any change
 
